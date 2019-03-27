@@ -18,14 +18,17 @@ db = SqliteDatabase('api.db')
 application = Flask(__name__)
 api = Api(application)
 
+
 # Database models
 class BaseModel(Model):
     class Meta:
         database = db
 
-class User(BaseModel):
+
+class Users(BaseModel):
     username = CharField()
     password = CharField()
+
 
 class Task(BaseModel):
     title = CharField()
@@ -34,10 +37,10 @@ class Task(BaseModel):
 
 # Connect to database and create tables
 db.connect()
-db.create_tables([Task, User])
+db.create_tables([Task, Users])
 
 # Create an admin account
-User.get_or_create(username='admin', password='admin')
+Users.get_or_create(username='admin', password='admin')
 
 # Lookup task by ID
 def get_task_by_id(task_id):
@@ -72,13 +75,13 @@ def before_request():
         if request.path != '/':
             username = request.args.get('username')
             password = request.args.get('password')
-            cursor = db.execute_sql("select * from user where username='" + username + "'")
-            user = cursor.fetchone()
-            user_id = user[0]
-            user_password = user[2]
+            user = Users.get(username=username)
+            print(user)
+            user_id = user.id
+            user_password = user.password
             if password == user_password:
                 g.user_id = user_id
-            application.logger.info('Found user: ', g.user_id)
+            application.logger.info('Found user: %s', g.user_id)
     except:
         abort(401)
 
