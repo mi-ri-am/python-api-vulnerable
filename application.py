@@ -6,6 +6,7 @@ from playhouse.shortcuts import model_to_dict
 import psycopg2
 import logging
 import os
+import uuid
 
 # Log the SQL
 logger = logging.getLogger('peewee')
@@ -40,7 +41,8 @@ db.connect()
 db.create_tables([Task, Users])
 
 # Create an admin account
-Users.get_or_create(username='admin', password='admin')
+# Users.get_or_create(username='admin', password='admin')
+
 
 # Lookup task by ID
 def get_task_by_id(task_id):
@@ -48,6 +50,7 @@ def get_task_by_id(task_id):
         return Task.get(id=task_id)
     except:
         abort(404, message='Task not found')
+
 
 # GET & POST /tasks
 class API_Tasks(Resource):
@@ -61,6 +64,7 @@ class API_Tasks(Resource):
         task = Task.create(title=request.json['title'], complete=False, user_id=g.user_id)
         return model_to_dict(task)
 
+
 # GET, PUT, DELETE /tasks/:id
 class API_Task(Resource):
     def get(self, task_id):
@@ -73,10 +77,9 @@ class API_Task(Resource):
 def before_request():
     try:
         if request.path != '/':
-            username = request.args.get('username')
-            password = request.args.get('password')
+            username = request.headers['username']
+            password = request.headers['password']
             user = Users.get(username=username)
-            print(user)
             user_id = user.id
             user_password = user.password
             if password == user_password:
@@ -84,6 +87,7 @@ def before_request():
             application.logger.info('Found user: %s', g.user_id)
     except:
         abort(401)
+
 
 @application.route('/')
 def hello():
@@ -94,4 +98,9 @@ api.add_resource(API_Tasks, '/tasks')
 api.add_resource(API_Task, '/tasks/<int:task_id>')
 
 if __name__ == '__main__':
+    try:
+        Users.get(username='admin')
+    except:
+        password = input('What is the admin password? ')
+        Users.get_or_create(username='admin', password=password)
     application.run(debug=True)
